@@ -2,18 +2,23 @@ import {
   Injectable,
   NotFoundException,
   ConflictException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { Pet } from '../pets/pet.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    @InjectRepository(Pet)
+    private petsRepository: Repository<Pet>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -49,8 +54,40 @@ export class UsersService {
     return await this.usersRepository.save(user);
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.usersRepository.find();
+  async findAll(): Promise<
+    (User & {
+      pets_count: {
+        active: number;
+        pending: number;
+        total: number;
+      };
+    })[]
+  > {
+    const users = await this.usersRepository.find();
+
+    // Obtener conteo de mascotas por usuario
+    const usersWithPetsCount = await Promise.all(
+      users.map(async (user) => {
+        const activeCount = await this.petsRepository.count({
+          where: { user_id: user.id, status: true },
+        });
+
+        const pendingCount = await this.petsRepository.count({
+          where: { user_id: user.id, status: false },
+        });
+
+        return {
+          ...user,
+          pets_count: {
+            active: activeCount,
+            pending: pendingCount,
+            total: activeCount + pendingCount,
+          },
+        };
+      }),
+    );
+
+    return usersWithPetsCount;
   }
 
   async findOne(id: number): Promise<User> {
@@ -61,7 +98,7 @@ export class UsersService {
     return user;
   }
 
-  async update(id: number, updateUserDto: CreateUserDto): Promise<User> {
+  async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findOne(id);
 
     // Validar email único (excluyendo el usuario actual)
@@ -84,7 +121,25 @@ export class UsersService {
       }
     }
 
+    // Si se intenta actualizar el password, validar el password antiguo
     if (updateUserDto.password) {
+      if (!updateUserDto.oldPassword) {
+        throw new UnauthorizedException(
+          'Old password is required to update password',
+        );
+      }
+
+      // Verificar que el password antiguo sea correcto
+      const isOldPasswordValid = await bcrypt.compare(
+        updateUserDto.oldPassword,
+        user.password,
+      );
+
+      if (!isOldPasswordValid) {
+        throw new UnauthorizedException('Old password is incorrect');
+      }
+
+      // Encriptar el nuevo password
       const saltRounds = 10;
       updateUserDto.password = await bcrypt.hash(
         updateUserDto.password,
@@ -92,7 +147,11 @@ export class UsersService {
       );
     }
 
-    Object.assign(user, updateUserDto);
+    // Eliminar oldPassword del objeto antes de actualizar (no es un campo de la entidad)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { oldPassword, ...updateData } = updateUserDto;
+
+    Object.assign(user, updateData);
     return await this.usersRepository.save(user);
   }
 
