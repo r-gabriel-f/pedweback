@@ -6,6 +6,8 @@ import { databaseConfig } from './config/database.config';
 import { UsersModule } from './modules/users/users.module';
 import { QrsModule } from './modules/qrs/qrs.module';
 import { PetsModule } from './modules/pets/pets.module';
+import { UploadModule } from './common/upload.module';
+import { AuthModule } from './modules/auth/auth.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { PetsModule } from './modules/pets/pets.module';
     UsersModule,
     QrsModule,
     PetsModule,
+    UploadModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
