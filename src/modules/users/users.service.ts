@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -43,11 +43,10 @@ export class UsersService {
     }
 
     if (createUserDto.password) {
-      const saltRounds = 10;
-      createUserDto.password = await bcrypt.hash(
-        createUserDto.password,
-        saltRounds,
-      );
+      createUserDto.password = crypto
+        .createHash('sha256')
+        .update(createUserDto.password)
+        .digest('hex');
     }
 
     const user = this.usersRepository.create(createUserDto);
@@ -121,35 +120,46 @@ export class UsersService {
       }
     }
 
-    // Si se intenta actualizar el password, validar el password antiguo
-    if (updateUserDto.password) {
-      if (!updateUserDto.oldPassword) {
+    // Separar password y oldPassword del resto de los datos
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const {
+      oldPassword,
+      password: passwordFromDto,
+      ...updateData
+    } = updateUserDto;
+
+    // Verificar si realmente queremos actualizar el password (no vacío)
+    const shouldUpdatePassword =
+      passwordFromDto &&
+      typeof passwordFromDto === 'string' &&
+      passwordFromDto.trim() !== '';
+
+    // Caso 1: Si se pasa password nuevo (no vacío), validar oldPassword y actualizar
+    if (shouldUpdatePassword) {
+      if (!oldPassword) {
         throw new UnauthorizedException(
           'Old password is required to update password',
         );
       }
 
       // Verificar que el password antiguo sea correcto
-      const isOldPasswordValid = await bcrypt.compare(
-        updateUserDto.oldPassword,
-        user.password,
-      );
+      const hashedOldPassword = crypto
+        .createHash('sha256')
+        .update(oldPassword)
+        .digest('hex');
 
-      if (!isOldPasswordValid) {
+      if (hashedOldPassword !== user.password) {
         throw new UnauthorizedException('Old password is incorrect');
       }
 
-      // Encriptar el nuevo password
-      const saltRounds = 10;
-      updateUserDto.password = await bcrypt.hash(
-        updateUserDto.password,
-        saltRounds,
-      );
+      // Hash del nuevo password con SHA256 y agregarlo a updateData
+      (updateData as any).password = crypto
+        .createHash('sha256')
+        .update(passwordFromDto)
+        .digest('hex');
     }
-
-    // Eliminar oldPassword del objeto antes de actualizar (no es un campo de la entidad)
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { oldPassword, ...updateData } = updateUserDto;
+    // Caso 2: Si no se pasa password o viene vacío, no incluirlo en updateData
+    // Así se mantiene el password actual del usuario
 
     Object.assign(user, updateData);
     return await this.usersRepository.save(user);

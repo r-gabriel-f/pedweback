@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import { User } from '../users/user.entity';
 import { LoginDto } from './dto/login.dto';
 
@@ -26,13 +26,13 @@ export class AuthService {
       throw new NotFoundException('Invalid email or password');
     }
 
-    // Verificar contraseña
-    const isPasswordValid = await bcrypt.compare(
-      loginDto.password,
-      user.password,
-    );
+    // Verificar contraseña con SHA256
+    const hashedPassword = crypto
+      .createHash('sha256')
+      .update(loginDto.password)
+      .digest('hex');
 
-    if (!isPasswordValid) {
+    if (hashedPassword !== user.password) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
