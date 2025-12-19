@@ -5,10 +5,12 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
+  OneToMany,
   JoinColumn,
 } from 'typeorm';
 import { QR } from '../qrs/qr.entity';
 import { User } from '../users/user.entity';
+import { Gallery } from '../gallery/gallery.entity';
 
 @Entity('pets')
 export class Pet {
@@ -28,6 +30,9 @@ export class Pet {
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user: User;
+
+  @OneToMany(() => Gallery, (gallery) => gallery.pet)
+  gallery: Gallery[];
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   name: string;

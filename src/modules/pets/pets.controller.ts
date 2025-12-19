@@ -4,6 +4,7 @@ import {
   Post,
   Body,
   Patch,
+  Put,
   Param,
   Delete,
   ParseIntPipe,
@@ -47,6 +48,14 @@ export class PetsController {
 
   @Patch(':id')
   update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updatePetDto: CreatePetDto,
+  ) {
+    return this.petsService.update(id, updatePetDto);
+  }
+
+  @Put(':id')
+  updatePut(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePetDto: CreatePetDto,
   ) {

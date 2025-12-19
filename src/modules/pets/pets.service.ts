@@ -43,7 +43,9 @@ export class PetsService {
       .createQueryBuilder('pet')
       .leftJoinAndSelect('pet.qr', 'qr')
       .leftJoinAndSelect('pet.user', 'user')
+      .leftJoinAndSelect('pet.gallery', 'gallery', 'gallery.pet_id = pet.id')
       .where('qr.uuid = :qrUuid', { qrUuid })
+      .addOrderBy('gallery.create_at', 'DESC')
       .getOne();
 
     if (!pet) {
