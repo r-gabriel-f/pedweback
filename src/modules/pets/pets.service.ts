@@ -26,10 +26,14 @@ export class PetsService {
   }
 
   async findOne(id: number): Promise<Pet> {
-    const pet = await this.petsRepository.findOne({
-      where: { id },
-      relations: ['qr', 'user'],
-    });
+    const pet = await this.petsRepository
+      .createQueryBuilder('pet')
+      .leftJoinAndSelect('pet.qr', 'qr')
+      .leftJoinAndSelect('pet.user', 'user')
+      .leftJoinAndSelect('pet.gallery', 'gallery', 'gallery.pet_id = pet.id')
+      .where('pet.id = :id', { id })
+      .addOrderBy('gallery.create_at', 'DESC')
+      .getOne();
 
     if (!pet) {
       throw new NotFoundException(`Pet with ID ${id} not found`);
@@ -70,11 +74,55 @@ export class PetsService {
   }
 
   async update(id: number, updatePetDto: CreatePetDto): Promise<Pet> {
-    const pet = await this.findOne(id);
+    const pet = await this.petsRepository.findOne({
+      where: { id },
+      relations: ['qr', 'user'],
+    });
+
+    if (!pet) {
+      throw new NotFoundException(`Pet with ID ${id} not found`);
+    }
 
     Object.assign(pet, updatePetDto);
+    await this.petsRepository.save(pet);
 
-    return await this.petsRepository.save(pet);
+    return await this.petsRepository
+      .createQueryBuilder('pet')
+      .leftJoinAndSelect('pet.qr', 'qr')
+      .leftJoinAndSelect('pet.user', 'user')
+      .leftJoinAndSelect('pet.gallery', 'gallery', 'gallery.pet_id = pet.id')
+      .where('pet.id = :id', { id })
+      .addOrderBy('gallery.create_at', 'DESC')
+      .getOne();
+  }
+
+  async updateByQrUuid(
+    qrUuid: string,
+    updatePetDto: CreatePetDto,
+  ): Promise<Pet> {
+    const pet = await this.petsRepository
+      .createQueryBuilder('pet')
+      .leftJoinAndSelect('pet.qr', 'qr')
+      .leftJoinAndSelect('pet.user', 'user')
+      .where('qr.uuid = :qrUuid', { qrUuid })
+      .getOne();
+
+    if (!pet) {
+      throw new NotFoundException(`No pet found for QR with UUID ${qrUuid}`);
+    }
+
+    Object.assign(pet, updatePetDto);
+    await this.petsRepository.save(pet);
+
+    // Recargar con todas las relaciones incluyendo la galería
+    return await this.petsRepository
+      .createQueryBuilder('pet')
+      .leftJoinAndSelect('pet.qr', 'qr')
+      .leftJoinAndSelect('pet.user', 'user')
+      .leftJoinAndSelect('pet.gallery', 'gallery', 'gallery.pet_id = pet.id')
+      .where('qr.uuid = :qrUuid', { qrUuid })
+      .addOrderBy('gallery.create_at', 'DESC')
+      .getOne();
   }
 
   async remove(id: number): Promise<void> {

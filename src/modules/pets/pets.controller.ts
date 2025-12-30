@@ -26,14 +26,19 @@ export class PetsController {
     return this.petsService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.petsService.findOne(id);
+  @Get('uuid/:qrUuid')
+  findByUuid(@Param('qrUuid') qrUuid: string) {
+    return this.petsService.findByQrUuid(qrUuid);
   }
 
   @Get('qr/uuid/:qrUuid')
   findByQrUuid(@Param('qrUuid') qrUuid: string) {
     return this.petsService.findByQrUuid(qrUuid);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.petsService.findOne(id);
   }
 
   @Get('qr/:qrId')
@@ -44,6 +49,22 @@ export class PetsController {
   @Get('user/:userId')
   findByUserId(@Param('userId', ParseIntPipe) userId: number) {
     return this.petsService.findByUserId(userId);
+  }
+
+  @Patch('qr/uuid/:qrUuid')
+  updateByQrUuid(
+    @Param('qrUuid') qrUuid: string,
+    @Body() updatePetDto: CreatePetDto,
+  ) {
+    return this.petsService.updateByQrUuid(qrUuid, updatePetDto);
+  }
+
+  @Put('qr/uuid/:qrUuid')
+  updatePutByQrUuid(
+    @Param('qrUuid') qrUuid: string,
+    @Body() updatePetDto: CreatePetDto,
+  ) {
+    return this.petsService.updateByQrUuid(qrUuid, updatePetDto);
   }
 
   @Patch(':id')

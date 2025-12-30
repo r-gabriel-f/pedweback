@@ -8,6 +8,7 @@ import { QrsModule } from './modules/qrs/qrs.module';
 import { PetsModule } from './modules/pets/pets.module';
 import { UploadModule } from './common/upload.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { GalleryModule } from './modules/gallery/gallery.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from './modules/auth/auth.module';
     PetsModule,
     UploadModule,
     AuthModule,
+    GalleryModule,
   ],
   controllers: [AppController],
   providers: [AppService],
