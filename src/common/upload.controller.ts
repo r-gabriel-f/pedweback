@@ -73,8 +73,8 @@ export class UploadController {
         // 2. Nombre único para el archivo
         const fileName = `galeria/${Date.now()}_${Math.random().toString(36).substring(7)}.webp`;
 
-        // 3. Subir a Supabase Storage
-        const { error } = await this.supabase.client.storage
+        // 3. Subir a Supabase Storage (con adminClient para evitar RLS)
+        const { error } = await this.supabase.adminClient.storage
           .from('pets') // bucket
           .upload(fileName, webpBuffer, {
             contentType: 'image/webp',
@@ -90,7 +90,7 @@ export class UploadController {
         }
 
         // 4. Obtener URL pública
-        const { data: publicUrlData } = this.supabase.client.storage
+        const { data: publicUrlData } = this.supabase.adminClient.storage
           .from('pets')
           .getPublicUrl(fileName);
 
@@ -102,6 +102,14 @@ export class UploadController {
             title,
             description,
           );
+
+          // Si es una imagen de perfil, eliminar las anteriores (BD + storage)
+          if (title === 'perfil') {
+            await this.galleryService.replaceProfileImages(
+              pet_id,
+              galleryItem.id,
+            );
+          }
 
           uploadResults.push({
             originalName: file.originalname,
@@ -151,8 +159,8 @@ export class UploadController {
     // 2. Nombre único para el archivo
     const fileName = `galeria/${Date.now()}.webp`;
 
-    // 3. Subir a Supabase Storage
-    const { error } = await this.supabase.client.storage
+    // 3. Subir a Supabase Storage (con adminClient para evitar RLS)
+    const { error } = await this.supabase.adminClient.storage
       .from('pets') // bucket
       .upload(fileName, webpBuffer, {
         contentType: 'image/webp',
@@ -161,7 +169,7 @@ export class UploadController {
     if (error) throw error;
 
     // 4. Obtener URL pública
-    const { data: publicUrlData } = this.supabase.client.storage
+    const { data: publicUrlData } = this.supabase.adminClient.storage
       .from('pets')
       .getPublicUrl(fileName);
 
