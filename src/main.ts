@@ -21,9 +21,22 @@ async function bootstrap() {
   // En desarrollo devuelve el mensaje real; en producción solo genérico.
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // Configurar CORS
+  // Configurar CORS — acepta múltiples orígenes separados por coma.
+  // Ej: FRONTEND_URL=http://localhost:5173,https://tu-app.netlify.app
+  const allowedOrigins = (process.env.FRONTEND_URL || '')
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Permitir requests sin origin (Postman, curl, server-to-server)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
     credentials: true,
   });
