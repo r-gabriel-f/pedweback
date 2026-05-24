@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './common/all-exceptions.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -15,6 +16,10 @@ async function bootstrap() {
       transformOptions: { enableImplicitConversion: true },
     }),
   );
+
+  // Filtro global de excepciones: loguea stack completo y detalle de errores.
+  // En desarrollo devuelve el mensaje real; en producción solo genérico.
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // Configurar CORS
   app.enableCors({

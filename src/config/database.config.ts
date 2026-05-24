@@ -7,6 +7,9 @@ const isProduction = process.env.NODE_ENV === 'production';
 const syncEnabled =
   !isProduction && process.env.DB_SYNCHRONIZE === 'true';
 
+// Supabase requiere SSL. Local Postgres no lo necesita.
+const useSSL = process.env.DB_SSL === 'true' || isProduction;
+
 export const databaseConfig: TypeOrmModuleOptions = {
   type: 'postgres',
   host: process.env.DB_HOST,
@@ -17,4 +20,5 @@ export const databaseConfig: TypeOrmModuleOptions = {
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
   synchronize: syncEnabled,
   logging: !isProduction,
+  ssl: useSSL ? { rejectUnauthorized: false } : false,
 };
